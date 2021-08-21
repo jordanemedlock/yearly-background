@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg id="drawing" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" >
+    <script type="text/javascript" xlink:href="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script type="text/javascript" xlink:href="./js/perlin.js"></script>
+    <script type="text/javascript" xlink:href="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.1.1/svg.min.js"></script>
+    <script type="text/javascript" xlink:href="./js/index.js"></script>
+</svg>
