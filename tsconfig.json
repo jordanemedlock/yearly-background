@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "target": "es5",
+        "lib": ["es6", "dom"],
+        "module": "es2015",
+        "sourceMap": true,
+        "outDir": "out",
+        "moduleResolution": "classic"
+    }
+}

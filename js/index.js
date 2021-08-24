@@ -1,6 +1,11 @@
 
+// import { SVG } from '@svgdotjs/svg.js'
 
-var draw = SVG('#drawing')
+
+var frameWidth = 1440;
+var frameHeight = 3200;
+
+var draw = SVG().addTo('#drawing').viewbox(0,0,frameWidth, frameHeight);
 
 var rotatePoint = function(deg, [x, y]) {
     var rad = deg / 180 * Math.PI;
@@ -10,10 +15,41 @@ var rotatePoint = function(deg, [x, y]) {
 var randRange = function(r, min, max) {
     return r * (max - min) + min;
 }
+/**
+ * Box Muller transform, creates a pair of normally distributed random numbers from unifrom
+ * @param {Number} r1 Uniform random variable #1 [0-1]
+ * @param {Number} r2 Univrom random variable #2 [0-1]
+ * @returns {[Number, Number]} a pair of normally distributed random numbers
+ */
+var boxMuller = function(r1, r2) {
+    var z1 = Math.sqrt(-2 * Math.log(r1)) * Math.cos(2 * Math.PI * r2)
+    var z2 = Math.sqrt(-2 * Math.log(r1)) * Math.sin(2 * Math.PI * r2)
+    return [z1, z2];
+}
 
 var perlinRandom = function (i, gridSize, resolution) {
     var x = i * gridSize / resolution;
     return perlin.get(x, x);
+}
+
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Correlates to random variables based on a correlation factor
+ * @param {Number} rat Correlation factor [0-1] (lower prefers left, higher prefers right)
+ * @param {Number} r1 Random value 1 [0-1]
+ * @param {Number} r2 Random value 2 [0-1]
+ * @param {Bool?} i1 Invert random value 1 (default false)
+ * @param {Bool?} i2 Invert random value 2 (default false)
+ * @returns {Number} a value related to the two input [0-1]
+ */
+var correlate = function (rat, r1, r2, i1, i2) {
+    var r1_ = i1 ? 1 - r1 : r1
+    var r2_ = i2 ? 1 - r2 : r2
+    return (1 - rat) * r1_ + rat * r2_;
 }
 
 var makeLine = function(gridSize, resolution, shapeVar, gravity) {
@@ -44,10 +80,16 @@ var sigmoid = function(z) {
     return 1 / (Math.exp(-z) + 1);
 }
 
+// var colors = [
+//     '#110077',
+//     '#FF4499'
+// ]
+
+
 var depthColor = function(z) {
     var r = z / 32;
-    var g = 0;
-    var b = 0.5;
+    var g = 0 + (z > 16 ? z - 16 : 0) / 64;
+    var b = 0.5 + z / 128;
     return 'rgb(' + Math.floor(r*255) + ',' + Math.floor(g*255) + ',' + Math.floor(b*255) + ')';
 }
 
@@ -56,16 +98,13 @@ var scaleFactor = 0.25;
 var makeTree = function(draw, z) {
     var heightR = Math.random();
     var height = randRange(heightR, 0.2, 2);
-    var angleCor = 0.25;
-    var angleR = (1 - heightR) * angleCor + Math.random() * (1 - angleCor);
+    var angleR = correlate(0.75, heightR, Math.random(), true); 
     var angle = randRange(angleR, 15, 50);
-    var shapeVarCor = 0.1;
-    var shapeVarRR = heightR * shapeVarCor + Math.random() * (1 - shapeVarCor);
+    var shapeVarRR = correlate(0.9, heightR, Math.random());
     var shapeVarR = randRange(shapeVarRR, 20, 50);
-    var shapeVarRL = heightR * shapeVarCor + Math.random() * (1 - shapeVarCor);
+    var shapeVarRL = correlate(0.9, heightR, Math.random());
     var shapeVarL = randRange(shapeVarRL, 20, 50);
-    var gravityCor = 0.5;
-    var gravityR = angleR * gravityCor + Math.random() * (1 - gravityCor);
+    var gravityR = correlate(0.5, angleR, Math.random());
     var gravity = randRange(gravityR, 0.5, 1);
     var g = draw.group();
     var scale = 1 / (z * scaleFactor);
@@ -92,14 +131,13 @@ var r = () => Math.random();
 var pr = (i,z,h) => -Math.cos(i / z);
 
 
-var makeLayer = function(draw, z, n) {
-
+var makeLayer = function(draw, z, n, width, height) {
     var points = []
     var x, y;
     var ys = [];
     for (var i=0; i < n; i++) {
-        x = i * window.innerWidth / n + r() * (1 / z * scaleFactor) * 64;
-        y = window.innerHeight - (1 * z * 2 - pr(i, z, 64)*16) * 16;
+        x = i * width / n + r() * (1 / z * scaleFactor) * 64;
+        y = height - (1 * Math.pow(z, 0.85) * 2 - pr(i, z, 64)*16) * 16;
         if (ys.length == 3) {
             ys = _.tail(ys);
         }
@@ -113,15 +151,20 @@ var makeLayer = function(draw, z, n) {
             translateY: _.max([y,m])
         });
     }
-    points.push([window.innerWidth,y])
-    points.push([window.innerWidth,window.innerHeight])   
-    points.push([0,window.innerHeight])    
+    points.push([width,y])
+    points.push([width,height])   
+    points.push([0,height])    
     var color = depthColor(z);
-
+    console.log(color)
     draw.polygon(points).stroke(color).fill(color)
 }
-makeLayer(draw, 20, 120);
-makeLayer(draw, 16, 80);
-makeLayer(draw, 12, 60);
-makeLayer(draw, 8, 30);
-makeLayer(draw, 4, 10);
+draw.size(frameWidth, frameHeight)
+draw.rect(frameWidth, frameHeight).fill('black')
+makeLayer(draw, 32, 120, frameWidth, frameHeight);
+makeLayer(draw, 28, 120, frameWidth, frameHeight);
+makeLayer(draw, 24, 120, frameWidth, frameHeight);
+makeLayer(draw, 20, 120, frameWidth, frameHeight);
+makeLayer(draw, 16, 80, frameWidth, frameHeight);
+makeLayer(draw, 12, 60, frameWidth, frameHeight);
+makeLayer(draw, 8, 30, frameWidth, frameHeight);
+makeLayer(draw, 4, 10, frameWidth, frameHeight);
